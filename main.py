@@ -1,5 +1,6 @@
 from lxml import etree
 import re
+import sys
 import time
 import requests
 import openpyxl
@@ -24,6 +25,7 @@ data = []
 student_id = []
 range_list = [[0, 100], [100, 200], [200, 300], [300, 400]]
 threads_list = []
+count = 0
 
 
 def get_html(id):
@@ -39,8 +41,10 @@ def get_ids():
 
 
 def work(thread_id):
+    global count
     start = thread_id * 2745
     finish = thread_id * 2745 + 2745
+
     for i in student_id[start:finish]:
         person = []
         html = get_html(str(i[0]))
@@ -58,19 +62,41 @@ def work(thread_id):
                 person.append(html_tree.xpath('//*[@id="entries_table"]/tbody/tr[2]/td[2]/div/@title')[0])
             except:
                 pass
+
         data.append(person)
+        count += 1
 
 
-if __name__ == '__main__':
+def time_bar():
+    sum_student = len(student_id)
+
+    while sum_student != count:
+        i = count / sum_student * 100
+        i_int = int(i)
+        print('\r', end='')
+        print('Waiting: %.2f' % i, '%:', '▓' * (i_int // 2), end='')
+        sys.stdout.flush()
+        time.sleep(0.01)
+    else:
+        print('\r', end='')
+        print('Finish: 100%:', '▓' * (100 // 2))
+
+
+def main():
     start_time = time.time()
 
     get_ids()
-    print('finish read excel')
+    print('Finish loading excel')
 
     for i in range(2):
         thread = threading.Thread(target=work, args=(i,))
         thread.start()
         threads_list.append(thread)
+
+    thread = threading.Thread(target=time_bar())
+    thread.start()
+    threads_list.append(thread)
+
     for i in threads_list:
         i.join()
 
@@ -82,3 +108,7 @@ if __name__ == '__main__':
 
     finish_time = time.time()
     print('run time:', finish_time - start_time)
+
+
+if __name__ == '__main__':
+    main()
